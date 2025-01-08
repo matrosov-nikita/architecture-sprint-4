@@ -1,16 +1,25 @@
 @startuml
 
 actor User
+participant "Message Queue" as MQ
 participant "MES API" as MES
 participant "Cache" as Cache
 participant "Database" as DB
 
 == Операция записи (Write-Through) ==
-User -> MES: Создание или обновление заказа
-MES -> Cache: Записать заказ в кэш
-Cache -> Cache: Обновить запись заказа
-Cache -> DB: Записать заказ в базу данных
-DB -> DB: Обновить запись заказа
+alt Запись через API
+  User -> MES: Создание или обновление заказа
+  MES -> Cache: Записать заказ в кэш
+  Cache -> Cache: Обновить запись заказа
+  Cache -> DB: Записать заказ в базу данных
+  DB -> DB: Обновить запись заказа
+else Запись через MQ
+  MQ -> MES: Получить событие изменения статуса заказа
+  MES -> Cache: Записать статус заказа в кэш
+  Cache -> Cache: Обновить запись статуса заказа
+  Cache -> DB: Обновить статус заказа в базе данных
+  DB -> DB: Обновить запись заказа
+end
 
 == Операция чтения списка заказов (Read-Through) ==
 User -> MES: Запросить список заказов
